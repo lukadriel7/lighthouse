@@ -23,13 +23,13 @@ class DeferrableDirective extends BaseDirective implements FieldMiddleware
 
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Do not use this directive directly, it is automatically added to the schema
 when using the defer extension.
 """
 directive @deferrable on FIELD_DEFINITION
-SDL;
+GRAPHQL;
     }
 
     /**
@@ -101,13 +101,12 @@ SDL;
         }
 
         $includes = (new ClientDirective(Directive::INCLUDE_NAME))->forField($resolveInfo);
-        foreach ($includes as $include) {
-            if ($include === [Directive::IF_ARGUMENT_NAME => false]) {
-                return false;
-            }
-        }
 
-        return true;
+        return ! in_array(
+            [Directive::IF_ARGUMENT_NAME => false],
+            $includes,
+            true
+        );
     }
 
     /**

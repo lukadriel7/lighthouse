@@ -20,6 +20,7 @@ use GraphQL\Utils\AST;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Nuwave\Lighthouse\Exceptions\DefinitionException;
+use Nuwave\Lighthouse\Schema\DirectiveLocator;
 use Nuwave\Lighthouse\Schema\Directives\NamespaceDirective;
 
 class ASTHelper
@@ -52,8 +53,6 @@ class ASTHelper
      * @param  bool  $overwriteDuplicates  By default this function throws if a collision occurs.
      *                                     If set to true, the fields of the original list will be overwritten.
      * @return \GraphQL\Language\AST\NodeList<\GraphQL\Language\AST\Node>
-     *
-     * @throws \Nuwave\Lighthouse\Exceptions\DefinitionException
      */
     public static function mergeUniqueNodeList($original, $addition, bool $overwriteDuplicates = false): NodeList
     {
@@ -145,7 +144,7 @@ class ASTHelper
         /** @var \GraphQL\Language\AST\ArgumentNode|null $arg */
         $arg = self::firstByName($directive->arguments, $name);
 
-        return $arg
+        return $arg !== null
             ? AST::valueFromASTUntyped($arg->value)
             : $default;
     }
@@ -214,7 +213,7 @@ class ASTHelper
     {
         $namespaceDirective = static::directiveDefinition($definitionNode, NamespaceDirective::NAME);
 
-        return $namespaceDirective
+        return $namespaceDirective !== null
             // The namespace directive can contain an argument with the name of the
             // current directive, in which case it applies here
             ? static::directiveArgValue($namespaceDirective, $directiveName, '')
@@ -292,12 +291,21 @@ class ASTHelper
             );
         }
 
+        /** @var \Nuwave\Lighthouse\Schema\DirectiveLocator $directiveLocator */
+        $directiveLocator = app(DirectiveLocator::class);
+        $directive = $directiveLocator->resolve($name);
+        $directiveDefinition = Parser::directiveDefinition($directive::definition());
+
         /** @var iterable<\GraphQL\Language\AST\FieldDefinitionNode> $fieldDefinitions */
         $fieldDefinitions = $objectType->fields;
         foreach ($fieldDefinitions as $fieldDefinition) {
-            // If the field already has the same directive defined, skip over it.
+            // If the field already has the same directive defined, and it is not
+            // a repeatable directive, skip over it.
             // Field directives are more specific than those defined on a type.
-            if (self::hasDirective($fieldDefinition, $name)) {
+            if (
+                self::hasDirective($fieldDefinition, $name)
+                && ! $directiveDefinition->repeatable
+            ) {
                 continue;
             }
 

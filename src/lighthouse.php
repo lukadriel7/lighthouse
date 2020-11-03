@@ -54,11 +54,10 @@ return [
     | The guard to use for authenticating GraphQL requests, if needed.
     | This setting is used whenever Lighthouse looks for an authenticated user, for example in directives
     | such as `@guard` and when applying the `AttemptAuthentication` middleware.
-    | TODO this setting will default to 'api' in v5
     |
     */
 
-    'guard' => null,
+    'guard' => 'api',
 
     /*
     |--------------------------------------------------------------------------
@@ -101,7 +100,7 @@ return [
          */
         'store' => env('LIGHTHOUSE_CACHE_STORE', null),
 
-        /**
+        /*
          * Duration in seconds the schema should remain cached, null means forever.
          */
         'ttl' => env('LIGHTHOUSE_CACHE_TTL', null),
@@ -172,29 +171,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Pagination Amount Argument
-    |--------------------------------------------------------------------------
-    |
-    | Set the name to use for the generated argument on paginated fields
-    | that controls how many results are returned.
-    |
-    | DEPRECATED This setting will be removed in v5.
-    |
-    */
-
-    'pagination_amount_argument' => 'first',
-
-    /*
-    |--------------------------------------------------------------------------
     | Debug
     |--------------------------------------------------------------------------
     |
     | Control the debug level as described in http://webonyx.github.io/graphql-php/error-handling/
     | Debugging is only applied if the global Laravel debug config is set to true.
     |
+    | When you set this value through an environment variable, use the following reference table:
+    |  0 => INCLUDE_NONE
+    |  1 => INCLUDE_DEBUG_MESSAGE
+    |  2 => INCLUDE_TRACE
+    |  3 => INCLUDE_TRACE | INCLUDE_DEBUG_MESSAGE
+    |  4 => RETHROW_INTERNAL_EXCEPTIONS
+    |  5 => RETHROW_INTERNAL_EXCEPTIONS | INCLUDE_DEBUG_MESSAGE
+    |  6 => RETHROW_INTERNAL_EXCEPTIONS | INCLUDE_TRACE
+    |  7 => RETHROW_INTERNAL_EXCEPTIONS | INCLUDE_TRACE | INCLUDE_DEBUG_MESSAGE
+    |  8 => RETHROW_UNSAFE_EXCEPTIONS
+    |  9 => RETHROW_UNSAFE_EXCEPTIONS | INCLUDE_DEBUG_MESSAGE
+    | 10 => RETHROW_UNSAFE_EXCEPTIONS | INCLUDE_TRACE
+    | 11 => RETHROW_UNSAFE_EXCEPTIONS | INCLUDE_TRACE | INCLUDE_DEBUG_MESSAGE
+    | 12 => RETHROW_UNSAFE_EXCEPTIONS | RETHROW_INTERNAL_EXCEPTIONS
+    | 13 => RETHROW_UNSAFE_EXCEPTIONS | RETHROW_INTERNAL_EXCEPTIONS | INCLUDE_DEBUG_MESSAGE
+    | 14 => RETHROW_UNSAFE_EXCEPTIONS | RETHROW_INTERNAL_EXCEPTIONS | INCLUDE_TRACE
+    | 15 => RETHROW_UNSAFE_EXCEPTIONS | RETHROW_INTERNAL_EXCEPTIONS | INCLUDE_TRACE | INCLUDE_DEBUG_MESSAGE
+    |
     */
 
-    'debug' => \GraphQL\Error\DebugFlag::INCLUDE_DEBUG_MESSAGE | \GraphQL\Error\DebugFlag::INCLUDE_TRACE,
+    'debug' => env('LIGHTHOUSE_DEBUG', \GraphQL\Error\DebugFlag::INCLUDE_DEBUG_MESSAGE | \GraphQL\Error\DebugFlag::INCLUDE_TRACE),
 
     /*
     |--------------------------------------------------------------------------
@@ -210,6 +213,25 @@ return [
     'error_handlers' => [
         \Nuwave\Lighthouse\Execution\ExtensionErrorHandler::class,
         \Nuwave\Lighthouse\Execution\ReportingErrorHandler::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Field Middleware
+    |--------------------------------------------------------------------------
+    |
+    | Register global field middleware directives that wrap around every field.
+    | Execution happens in the defined order, before other field middleware.
+    | The classes must implement \Nuwave\Lighthouse\Support\Contracts\FieldMiddleware
+    |
+    */
+
+    'field_middleware' => [
+        \Nuwave\Lighthouse\Schema\Directives\SanitizeDirective::class,
+        \Nuwave\Lighthouse\Validation\ValidateDirective::class,
+        \Nuwave\Lighthouse\Schema\Directives\TransformArgsDirective::class,
+        \Nuwave\Lighthouse\Schema\Directives\SpreadDirective::class,
+        \Nuwave\Lighthouse\Schema\Directives\RenameArgsDirective::class,
     ],
 
     /*
@@ -257,11 +279,9 @@ return [
     | a model with arguments in mutation directives. Since GraphQL constrains
     | allowed inputs by design, mass assignment protection is not needed.
     |
-    | Will default to true in v5.
-    |
     */
 
-    'force_fill' => false,
+    'force_fill' => true,
 
     /*
     |--------------------------------------------------------------------------

@@ -37,9 +37,6 @@ abstract class MutationExecutorDirective extends BaseDirective implements FieldR
         $this->globalId = $globalId;
     }
 
-    /**
-     * Resolve the field directive.
-     */
     public function resolveField(FieldValue $fieldValue): FieldValue
     {
         return $fieldValue->setResolver(
@@ -71,8 +68,8 @@ abstract class MutationExecutorDirective extends BaseDirective implements FieldR
 
     /**
      * @param  \Illuminate\Database\Eloquent\Model  $parent
-     * @param  \Nuwave\Lighthouse\Execution\Arguments\ArgumentSet|\Nuwave\Lighthouse\Execution\Arguments\ArgumentSet[]  $args
-     * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Database\Eloquent\Model[]
+     * @param  \Nuwave\Lighthouse\Execution\Arguments\ArgumentSet|array<\Nuwave\Lighthouse\Execution\Arguments\ArgumentSet>  $args
+     * @return \Illuminate\Database\Eloquent\Model|array<\Illuminate\Database\Eloquent\Model>
      */
     public function __invoke($parent, $args)
     {
@@ -90,8 +87,8 @@ abstract class MutationExecutorDirective extends BaseDirective implements FieldR
     }
 
     /**
-     * @param  \Nuwave\Lighthouse\Execution\Arguments\ArgumentSet|\Nuwave\Lighthouse\Execution\Arguments\ArgumentSet[]  $args
-     * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Database\Eloquent\Model[]
+     * @param  \Nuwave\Lighthouse\Execution\Arguments\ArgumentSet|array<\Nuwave\Lighthouse\Execution\Arguments\ArgumentSet>  $args
+     * @return \Illuminate\Database\Eloquent\Model|array<\Illuminate\Database\Eloquent\Model>
      */
     protected function executeMutation(Model $model, $args, ?Relation $parentRelation = null)
     {

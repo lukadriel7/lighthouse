@@ -8,9 +8,9 @@ class SearchDirective extends BaseDirective implements ArgBuilderDirective
 {
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
-Perform a full-text by the given input value.
+Perform a full-text search by the given input value.
 """
 directive @search(
   """
@@ -18,7 +18,7 @@ directive @search(
   """
   within: String
 ) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-SDL;
+GRAPHQL;
     }
 
     /**

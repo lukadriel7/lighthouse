@@ -32,7 +32,7 @@ class CacheDirective extends BaseDirective implements FieldMiddleware
 
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Cache the result of a resolver.
 """
@@ -50,7 +50,7 @@ directive @cache(
   """
   private: Boolean = false
 ) on FIELD_DEFINITION
-SDL;
+GRAPHQL;
     }
 
     public function handleField(FieldValue $fieldValue, Closure $next): FieldValue
@@ -79,12 +79,10 @@ SDL;
 
             $cacheKey = $cacheValue->getKey();
 
-            if ($this->shouldUseTags()) {
-                $cache = $this->cacheRepository->tags($cacheValue->getTags());
-            } else {
-                $cache = $this->cacheRepository;
-            }
             /** @var \Illuminate\Cache\TaggedCache|\Illuminate\Contracts\Cache\Repository $cache */
+            $cache = $this->shouldUseTags()
+                ? $this->cacheRepository->tags($cacheValue->getTags())
+                : $this->cacheRepository;
 
             // We found a matching value in the cache, so we can just return early
             // without actually running the query

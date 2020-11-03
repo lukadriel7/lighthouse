@@ -18,6 +18,7 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Type\Definition\UnionType;
+use Illuminate\Pipeline\Pipeline;
 use Nuwave\Lighthouse\Exceptions\DefinitionException;
 use Nuwave\Lighthouse\Schema\AST\ASTHelper;
 use Nuwave\Lighthouse\Schema\AST\DocumentAST;
@@ -30,7 +31,6 @@ use Nuwave\Lighthouse\Schema\Values\FieldValue;
 use Nuwave\Lighthouse\Schema\Values\TypeValue;
 use Nuwave\Lighthouse\Support\Contracts\TypeMiddleware;
 use Nuwave\Lighthouse\Support\Contracts\TypeResolver;
-use Nuwave\Lighthouse\Support\Pipeline;
 use Nuwave\Lighthouse\Support\Utils;
 
 class TypeRegistry
@@ -43,7 +43,7 @@ class TypeRegistry
     protected $types = [];
 
     /**
-     * @var \Nuwave\Lighthouse\Support\Pipeline
+     * @var \Illuminate\Pipeline\Pipeline
      */
     protected $pipeline;
 
@@ -118,7 +118,12 @@ EOL
      */
     public function register(Type $type): self
     {
-        $this->types[$type->name] = $type;
+        $name = $type->name;
+        if ($this->has($name)) {
+            throw new DefinitionException("Tried to register a type that is already present in the schema: {$name}. Use overwrite() to ignore existing types.");
+        }
+
+        $this->types[$name] = $type;
 
         return $this;
     }
@@ -130,26 +135,7 @@ EOL
      */
     public function overwrite(Type $type): self
     {
-        return $this->register($type);
-    }
-
-    /**
-     * Register a new type, throw if the name is already registered.
-     *
-     * @throws \Nuwave\Lighthouse\Exceptions\DefinitionException
-     *
-     * @deprecated just use register() for this behavior
-     * TODO remove in v5
-     * @return $this
-     */
-    public function registerNew(Type $type): self
-    {
-        $name = $type->name;
-        if ($this->has($name)) {
-            throw new DefinitionException("Tried to register a type that is already present in the schema: {$name}. Use overwrite() to ignore existing types.");
-        }
-
-        $this->types[$name] = $type;
+        $this->types[$type->name] = $type;
 
         return $this;
     }
@@ -207,16 +193,19 @@ EOL
      */
     public function handle(TypeDefinitionNode $definition): Type
     {
-        $typeValue = new TypeValue($definition);
-
         return $this->pipeline
-            ->send($typeValue)
+            ->send(
+                new TypeValue($definition)
+            )
             ->through(
-                $this->directiveFactory->associatedOfType($definition, TypeMiddleware::class)
+                $this->directiveFactory
+                    ->associatedOfType($definition, TypeMiddleware::class)
+                    ->all()
             )
             ->via('handleNode')
             ->then(function (TypeValue $value) use ($definition): Type {
-                if ($typeResolver = $this->directiveFactory->exclusiveOfType($definition, TypeResolver::class)) {
+                $typeResolver = $this->directiveFactory->exclusiveOfType($definition, TypeResolver::class);
+                if ($typeResolver !== null) {
                     /** @var \Nuwave\Lighthouse\Support\Contracts\TypeResolver $typeResolver */
                     return $typeResolver->resolveNode($value);
                 }
@@ -265,7 +254,7 @@ EOL
 
             $values[$enumValue->name->value] = [
                 // If no explicit value is given, we default to the name of the value
-                'value' => $enumDirective
+                'value' => $enumDirective !== null
                     ? $enumDirective->value()
                     : $enumValue->name->value,
                 'description' => data_get($enumValue->description, 'value'),
@@ -287,7 +276,7 @@ EOL
     {
         $scalarName = $scalarDefinition->name->value;
 
-        if ($directive = ASTHelper::directiveDefinition($scalarDefinition, 'scalar')) {
+        if (($directive = ASTHelper::directiveDefinition($scalarDefinition, 'scalar')) !== null) {
             $className = ASTHelper::directiveArgValue($directive, 'class');
         } else {
             $className = $scalarName;
@@ -328,7 +317,6 @@ EOL
 
                     // Might be a NodeList, so we can not use array_map()
                     foreach ($objectDefinition->interfaces as $interface) {
-                        // @phpstan-ignore-next-line remove once https://github.com/webonyx/graphql-php/pull/695 is releases
                         $interfaces [] = $this->get($interface->name->value);
                     }
 
@@ -387,7 +375,7 @@ EOL
     {
         $nodeName = $interfaceDefinition->name->value;
 
-        if ($directiveNode = ASTHelper::directiveDefinition($interfaceDefinition, 'interface')) {
+        if (($directiveNode = ASTHelper::directiveDefinition($interfaceDefinition, 'interface')) !== null) {
             $interfaceDirective = (new InterfaceDirective)->hydrate($directiveNode, $interfaceDefinition);
 
             $typeResolver = $interfaceDirective->getResolverFromArgument('resolveType');
@@ -413,20 +401,6 @@ EOL
      */
     protected function findTypeResolverClass(string $nodeName, array $namespaces): ?Closure
     {
-        // TODO use only __invoke in v5
-        $className = Utils::namespaceClassname(
-            $nodeName,
-            $namespaces,
-            function (string $className): bool {
-                return method_exists($className, 'resolveType');
-            }
-        );
-        if ($className) {
-            return Closure::fromCallable(
-                [app($className), 'resolveType']
-            );
-        }
-
         $className = Utils::namespaceClassname(
             $nodeName,
             $namespaces,
@@ -461,7 +435,7 @@ EOL
     {
         $nodeName = $unionDefinition->name->value;
 
-        if ($directiveNode = ASTHelper::directiveDefinition($unionDefinition, 'union')) {
+        if (($directiveNode = ASTHelper::directiveDefinition($unionDefinition, 'union')) !== null) {
             $unionDirective = (new UnionDirective)->hydrate($directiveNode, $unionDefinition);
 
             $typeResolver = $unionDirective->getResolverFromArgument('resolveType');

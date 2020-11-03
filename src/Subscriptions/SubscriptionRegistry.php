@@ -35,14 +35,14 @@ class SubscriptionRegistry
     /**
      * A map from operation names to channel names.
      *
-     * @var string[]
+     * @var array<string, string>
      */
     protected $subscribers = [];
 
     /**
      * Active subscription fields of the schema.
      *
-     * @var \Nuwave\Lighthouse\Schema\Types\GraphQLSubscription[]
+     * @var array<string, \Nuwave\Lighthouse\Schema\Types\GraphQLSubscription>
      */
     protected $subscriptions = [];
 
@@ -100,7 +100,7 @@ class SubscriptionRegistry
     public function subscriber(Subscriber $subscriber, string $topic): self
     {
         $this->storage->storeSubscriber($subscriber, $topic);
-        $this->subscribers[$subscriber->operationName] = $subscriber->channel;
+        $this->subscribers[$subscriber->fieldName] = $subscriber->channel;
 
         return $this;
     }

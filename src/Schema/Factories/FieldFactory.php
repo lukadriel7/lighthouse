@@ -3,19 +3,14 @@
 namespace Nuwave\Lighthouse\Schema\Factories;
 
 use GraphQL\Type\Definition\ResolveInfo;
+use Illuminate\Pipeline\Pipeline;
 use Nuwave\Lighthouse\Execution\Arguments\ArgumentSetFactory;
 use Nuwave\Lighthouse\Schema\AST\ASTHelper;
 use Nuwave\Lighthouse\Schema\DirectiveLocator;
-use Nuwave\Lighthouse\Schema\Directives\RenameArgsDirective;
-use Nuwave\Lighthouse\Schema\Directives\SanitizeDirective;
-use Nuwave\Lighthouse\Schema\Directives\SpreadDirective;
-use Nuwave\Lighthouse\Schema\Directives\TransformArgsDirective;
 use Nuwave\Lighthouse\Schema\Values\FieldValue;
 use Nuwave\Lighthouse\Support\Contracts\FieldMiddleware;
 use Nuwave\Lighthouse\Support\Contracts\FieldResolver;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
-use Nuwave\Lighthouse\Support\Pipeline;
-use Nuwave\Lighthouse\Validation\ValidateDirective;
 
 class FieldFactory
 {
@@ -30,7 +25,7 @@ class FieldFactory
     protected $argumentFactory;
 
     /**
-     * @var \Nuwave\Lighthouse\Support\Pipeline
+     * @var \Illuminate\Pipeline\Pipeline
      */
     protected $pipeline;
 
@@ -61,26 +56,30 @@ class FieldFactory
         $fieldDefinitionNode = $fieldValue->getField();
 
         // Directives have the first priority for defining a resolver for a field
-        /** @var \Nuwave\Lighthouse\Support\Contracts\FieldResolver $resolverDirective */
-        if ($resolverDirective = $this->directiveFactory->exclusiveOfType($fieldDefinitionNode, FieldResolver::class)) {
+        $resolverDirective = $this->directiveFactory->exclusiveOfType($fieldDefinitionNode, FieldResolver::class);
+        if ($resolverDirective instanceof FieldResolver) {
             $fieldValue = $resolverDirective->resolveField($fieldValue);
         } else {
             $fieldValue = $fieldValue->useDefaultResolver();
         }
 
-        $fieldMiddleware = $this->directiveFactory->associatedOfType($fieldDefinitionNode, FieldMiddleware::class)
-            // Middleware resolve in reversed order
-            ->push(app(RenameArgsDirective::class))
-            ->push(app(SpreadDirective::class))
-            ->push(app(TransformArgsDirective::class))
-            ->push(app(ValidateDirective::class))
-            ->push(app(SanitizeDirective::class));
+        $fieldMiddleware = $this->directiveFactory->associatedOfType($fieldDefinitionNode, FieldMiddleware::class);
+
+        $globalFieldMiddleware = config('lighthouse.field_middleware');
+        // Middleware resolve in reversed order, so we reverse them
+        foreach (array_reverse($globalFieldMiddleware) as $globalFieldMiddlewareClass) {
+            $fieldMiddleware->push(
+                app($globalFieldMiddlewareClass)
+            );
+        }
 
         $resolverWithMiddleware = $this->pipeline
             ->send($fieldValue)
-            ->through($fieldMiddleware)
+            ->through($fieldMiddleware->all())
             ->via('handleField')
-            ->then(function (FieldValue $fieldValue): FieldValue {
+            // TODO replace when we cut support for Laravel 5.6
+            //->thenReturn()
+            ->then(static function (FieldValue $fieldValue): FieldValue {
                 return $fieldValue;
             })
             ->getResolver();

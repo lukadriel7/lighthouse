@@ -29,7 +29,7 @@ class ValidatorDirective extends BaseDirective implements ArgDirective, Provides
 
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Provide validation rules through a PHP class.
 """
@@ -42,22 +42,15 @@ directive @validator(
   and the field name: `{$parent}{$field}Validator`.
   """
   class: String
-) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION | FIELD_DEFINITION | INPUT_OBJECT
-SDL;
+) repeatable on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION | FIELD_DEFINITION | INPUT_OBJECT
+GRAPHQL;
     }
 
-    /**
-     * @return mixed[]
-     * @throws DefinitionException
-     */
     public function rules(): array
     {
         return $this->validator()->rules();
     }
 
-    /**
-     * @return string[]
-     */
     public function messages(): array
     {
         return $this->validator()->messages();
@@ -65,7 +58,7 @@ SDL;
 
     protected function validator(): Validator
     {
-        if (! $this->validator) {
+        if ($this->validator === null) {
             /** @var \Nuwave\Lighthouse\Validation\Validator $validator */
             $validator = app(
                 // We precomputed and validated the full class name at schema build time

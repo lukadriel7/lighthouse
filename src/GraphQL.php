@@ -2,24 +2,30 @@
 
 namespace Nuwave\Lighthouse;
 
+use GraphQL\Error\DebugFlag;
 use GraphQL\Error\Error;
 use GraphQL\Executor\ExecutionResult;
 use GraphQL\GraphQL as GraphQLBase;
+use GraphQL\Server\Helper;
+use GraphQL\Server\OperationParams;
+use GraphQL\Server\RequestError;
 use GraphQL\Type\Schema;
 use Illuminate\Contracts\Events\Dispatcher as EventDispatcher;
+use Illuminate\Http\Request;
+use Illuminate\Pipeline\Pipeline;
+use Illuminate\Support\Collection;
+use Laragraph\Utils\RequestParser;
 use Nuwave\Lighthouse\Events\BuildExtensionsResponse;
 use Nuwave\Lighthouse\Events\ManipulateResult;
 use Nuwave\Lighthouse\Events\StartExecution;
 use Nuwave\Lighthouse\Execution\DataLoader\BatchLoader;
 use Nuwave\Lighthouse\Execution\ErrorPool;
-use Nuwave\Lighthouse\Execution\GraphQLRequest;
 use Nuwave\Lighthouse\Schema\AST\ASTBuilder;
-use Nuwave\Lighthouse\Schema\AST\DocumentAST;
 use Nuwave\Lighthouse\Schema\SchemaBuilder;
 use Nuwave\Lighthouse\Support\Contracts\CreatesContext;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 use Nuwave\Lighthouse\Support\Contracts\ProvidesValidationRules;
-use Nuwave\Lighthouse\Support\Pipeline;
+use Nuwave\Lighthouse\Support\Utils as LighthouseUtils;
 
 class GraphQL
 {
@@ -34,7 +40,7 @@ class GraphQL
     protected $schemaBuilder;
 
     /**
-     * @var \Nuwave\Lighthouse\Support\Pipeline
+     * @var \Illuminate\Pipeline\Pipeline
      */
     protected $pipeline;
 
@@ -82,21 +88,53 @@ class GraphQL
     }
 
     /**
-     * Execute a set of batched queries on the lighthouse schema and return a
-     * collection of ExecutionResults.
-     *
-     * @return mixed[]
+     * @return array<string, mixed>|array<int, array<string, mixed>>
      */
-    public function executeRequest(GraphQLRequest $request): array
+    public function executeRequest(Request $request, RequestParser $requestParser, Helper $graphQLHelper): array
+    {
+        $operationParams = $requestParser->parseRequest($request);
+
+        return LighthouseUtils::applyEach(
+            /**
+             * @return array<string, mixed>
+             */
+            function (OperationParams $operationParams) use ($graphQLHelper): array {
+                $errors = $graphQLHelper->validateOperationParams($operationParams);
+
+                if (count($errors) > 0) {
+                    $errors = array_map(
+                        static function (RequestError $err): Error {
+                            return Error::createLocatedError($err, null, null);
+                        },
+                        $errors
+                    );
+
+                    return $this->applyDebugSettings(
+                        new ExecutionResult(null, $errors)
+                    );
+                }
+
+                return $this->executeOperation($operationParams);
+            },
+            $operationParams
+        );
+    }
+
+    /**
+     * Run a single GraphQL operation against the schema and get a result.
+     *
+     * @return array<string, mixed>
+     */
+    public function executeOperation(OperationParams $params): array
     {
         $result = $this->executeQuery(
-            $request->query(),
+            $params->query,
             $this->createsContext->generate(
                 app('request')
             ),
-            $request->variables(),
+            $params->variables,
             null,
-            $request->operationName()
+            $params->operation
         );
 
         return $this->applyDebugSettings($result);
@@ -105,7 +143,7 @@ class GraphQL
     /**
      * Apply the debug settings from the config and get the result as an array.
      *
-     * @return mixed[]
+     * @return array<string, mixed>
      */
     public function applyDebugSettings(ExecutionResult $result): array
     {
@@ -114,8 +152,8 @@ class GraphQL
         // level from the Lighthouse configuration.
         return $result->toArray(
             config('app.debug')
-                ? config('lighthouse.debug')
-                : false
+                ? (int) config('lighthouse.debug')
+                : DebugFlag::NONE
         );
     }
 
@@ -162,7 +200,7 @@ class GraphQL
         );
 
         foreach ($extensionsResponses as $extensionsResponse) {
-            if ($extensionsResponse) {
+            if ($extensionsResponse !== null) {
                 $result->extensions[$extensionsResponse->key()] = $extensionsResponse->content();
             }
         }
@@ -175,19 +213,26 @@ class GraphQL
             function (array $errors, callable $formatter): array {
                 // User defined error handlers, implementing \Nuwave\Lighthouse\Execution\ErrorHandler
                 // This allows the user to register multiple handlers and pipe the errors through.
-                $handlers = config('lighthouse.error_handlers', []);
+                $handlers = [];
+                foreach (config('lighthouse.error_handlers', []) as $handlerClass) {
+                    $handlers [] = app($handlerClass);
+                }
 
-                return array_map(
-                    function (Error $error) use ($handlers, $formatter) {
+                return (new Collection($errors))
+                    ->map(function (Error $error) use ($handlers, $formatter): ?array {
                         return $this->pipeline
                             ->send($error)
                             ->through($handlers)
-                            ->then(function (Error $error) use ($formatter) {
+                            ->then(function (?Error $error) use ($formatter): ?array {
+                                if ($error === null) {
+                                    return null;
+                                }
+
                                 return $formatter($error);
                             });
-                    },
-                    $errors
-                );
+                    })
+                    ->filter()
+                    ->all();
             }
         );
 
@@ -206,7 +251,7 @@ class GraphQL
      */
     public function prepSchema(): Schema
     {
-        if (empty($this->executableSchema)) {
+        if (! isset($this->executableSchema)) {
             $this->executableSchema = $this->schemaBuilder->build(
                 $this->astBuilder->documentAST()
             );
@@ -222,15 +267,5 @@ class GraphQL
     {
         BatchLoader::forgetInstances();
         $this->errorPool->clear();
-    }
-
-    /**
-     * Get instance of DocumentAST.
-     *
-     * @deprecated use ASTBuilder instead
-     */
-    public function documentAST(): DocumentAST
-    {
-        return $this->astBuilder->documentAST();
     }
 }

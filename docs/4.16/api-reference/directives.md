@@ -184,7 +184,7 @@ directive @belongsToMany(
   scopes: [String!]
 
   """
-  ALlows to resolve the relation as a paginated list.
+  Allows to resolve the relation as a paginated list.
   Allowed values: `paginator`, `connection`.
   """
   type: String
@@ -1137,7 +1137,7 @@ directive @hasMany(
   scopes: [String!]
 
   """
-  ALlows to resolve the relation as a paginated list.
+  Allows to resolve the relation as a paginated list.
   Allowed values: `paginator`, `connection`.
   """
   type: String
@@ -1590,7 +1590,7 @@ type Post @modelClass(class: "\\App\\BlogPost") {
 
 ```graphql
 """
-Corresponds to [Eloquent's MorphMany-Relationship](https://laravel.com/docs/eloquent-relationships#one-to-one-polymorphic-relations).
+Corresponds to [Eloquent's MorphMany-Relationship](https://laravel.com/docs/eloquent-relationships#one-to-many-polymorphic-relations).
 """
 directive @morphMany(
   """
@@ -1605,7 +1605,7 @@ directive @morphMany(
   scopes: [String!]
 
   """
-  ALlows to resolve the relation as a paginated list.
+  Allows to resolve the relation as a paginated list.
   Allowed values: `paginator`, `connection`.
   """
   type: String

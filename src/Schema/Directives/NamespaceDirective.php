@@ -24,13 +24,13 @@ class NamespaceDirective extends BaseDirective implements TypeManipulator, TypeE
 
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Redefine the default namespaces used in other directives.
 The arguments are a map from directive names to namespaces.
 """
 directive @namespace on FIELD_DEFINITION | OBJECT
-SDL;
+GRAPHQL;
     }
 
     /**
@@ -43,7 +43,8 @@ SDL;
 
         // @phpstan-ignore-next-line graphql-php types are unnecessarily nullable
         foreach ($objectType->fields as $fieldDefinition) {
-            if ($existingNamespaces = ASTHelper::directiveDefinition($fieldDefinition, self::NAME)) {
+            $existingNamespaces = ASTHelper::directiveDefinition($fieldDefinition, self::NAME);
+            if ($existingNamespaces !== null) {
                 $namespaceDirective->arguments = $namespaceDirective->arguments->merge($existingNamespaces->arguments);
             }
 

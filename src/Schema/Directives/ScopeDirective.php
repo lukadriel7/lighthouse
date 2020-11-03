@@ -10,9 +10,10 @@ class ScopeDirective extends BaseDirective implements ArgBuilderDirective
 {
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Adds a scope to the query builder.
+
 The scope method will receive the client-given value of the argument as the second parameter.
 """
 directive @scope(
@@ -20,8 +21,8 @@ directive @scope(
   The name of the scope.
   """
   name: String
-) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-SDL;
+) repeatable on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+GRAPHQL;
     }
 
     /**

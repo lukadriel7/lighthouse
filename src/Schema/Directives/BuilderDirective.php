@@ -8,7 +8,7 @@ class BuilderDirective extends BaseDirective implements ArgBuilderDirective
 {
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Use an argument to modify the query builder for a field.
 """
@@ -19,8 +19,8 @@ directive @builder(
   If you pass only a class name, the method name defaults to `__invoke`.
   """
   method: String!
-) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-SDL;
+) repeatable on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+GRAPHQL;
     }
 
     /**
@@ -31,11 +31,8 @@ SDL;
      */
     public function handleBuilder($builder, $value): object
     {
-        return call_user_func(
-            $this->getResolverFromArgument('method'),
-            $builder,
-            $value,
-            $this->definitionNode
-        );
+        $resolver = $this->getResolverFromArgument('method');
+
+        return $resolver($builder, $value, $this->definitionNode);
     }
 }

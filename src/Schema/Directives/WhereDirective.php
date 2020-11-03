@@ -8,7 +8,7 @@ class WhereDirective extends BaseDirective implements ArgBuilderDirective
 {
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Use an input value as a [where filter](https://laravel.com/docs/queries#where-clauses).
 """
@@ -25,11 +25,11 @@ directive @where(
   key: String
 
   """
-  Use Laravel\'s where clauses upon the query builder.
+  Use Laravel's where clauses upon the query builder.
   """
   clause: String
-) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-SDL;
+) repeatable on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+GRAPHQL;
     }
 
     /**

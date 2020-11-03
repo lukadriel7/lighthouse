@@ -7,19 +7,19 @@ use GraphQL\Type\Schema;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Laravel\Scout\ScoutServiceProvider;
+use Nuwave\Lighthouse\GlobalId\GlobalIdServiceProvider;
 use Nuwave\Lighthouse\GraphQL;
 use Nuwave\Lighthouse\LighthouseServiceProvider;
 use Nuwave\Lighthouse\OrderBy\OrderByServiceProvider;
+use Nuwave\Lighthouse\Pagination\PaginationServiceProvider;
 use Nuwave\Lighthouse\SoftDeletes\SoftDeletesServiceProvider;
 use Nuwave\Lighthouse\Support\AppVersion;
 use Nuwave\Lighthouse\Testing\MakesGraphQLRequests;
 use Nuwave\Lighthouse\Testing\MocksResolvers;
 use Nuwave\Lighthouse\Testing\UsesTestSchema;
 use Nuwave\Lighthouse\Validation\ValidationServiceProvider;
-use Orchestra\Database\ConsoleServiceProvider;
 use Orchestra\Testbench\TestCase as BaseTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
-use Tests\Utils\Middleware\CountRuns;
 use Tests\Utils\Policies\AuthServiceProvider;
 
 abstract class TestCase extends BaseTestCase
@@ -42,7 +42,7 @@ GRAPHQL;
     {
         parent::setUp();
 
-        if (! $this->schema) {
+        if (! isset($this->schema)) {
             $this->schema = self::PLACEHOLDER_QUERY;
         }
 
@@ -59,11 +59,14 @@ GRAPHQL;
     {
         return [
             AuthServiceProvider::class,
-            ConsoleServiceProvider::class,
             ScoutServiceProvider::class,
+
+            // Lighthouse's own
             LighthouseServiceProvider::class,
-            SoftDeletesServiceProvider::class,
+            GlobalIdServiceProvider::class,
             OrderByServiceProvider::class,
+            PaginationServiceProvider::class,
+            SoftDeletesServiceProvider::class,
             ValidationServiceProvider::class,
         ];
     }
@@ -130,10 +133,12 @@ GRAPHQL;
             ]
         );
 
-        // TODO remove when the default changes
-        $config->set('lighthouse.force_fill', true);
+        $config->set('lighthouse.guard', null);
 
         $config->set('app.debug', true);
+
+        // Defaults to "algolia", which is not needed in our test setup
+        $config->set('scout.driver', null);
     }
 
     /**
@@ -153,13 +158,6 @@ GRAPHQL;
 
             return new PreLaravel7ExceptionHandler();
         });
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        CountRuns::$runCounter = 0;
     }
 
     /**

@@ -8,15 +8,18 @@ class EqDirective extends BaseDirective implements ArgBuilderDirective
 {
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
+"""
+Use the client given value to add an equal conditional to a database query.
+"""
 directive @eq(
   """
   Specify the database column to compare.
   Only required if database column has a different name than the attribute in your schema.
   """
   key: String
-) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-SDL;
+) repeatable on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+GRAPHQL;
     }
 
     /**

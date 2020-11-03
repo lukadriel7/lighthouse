@@ -66,6 +66,8 @@ class ArgumentSet
 
     /**
      * Apply the @spread directive and return a new, modified instance.
+     *
+     * @noRector \Rector\DeadCode\Rector\ClassMethod\RemoveDeadRecursiveClassMethodRector
      */
     public function spread(): self
     {
@@ -97,6 +99,8 @@ class ArgumentSet
 
     /**
      * Apply the @rename directive and return a new, modified instance.
+     *
+     * @noRector \Rector\DeadCode\Rector\ClassMethod\RemoveDeadRecursiveClassMethodRector
      */
     public function rename(): self
     {
@@ -123,7 +127,7 @@ class ArgumentSet
                 return $directive instanceof RenameDirective;
             });
 
-            if ($renameDirective) {
+            if ($renameDirective !== null) {
                 $argumentSet->arguments[$renameDirective->attributeArgValue()] = $argument;
             } else {
                 $argumentSet->arguments[$name] = $argument;
@@ -137,7 +141,7 @@ class ArgumentSet
      * Apply ArgBuilderDirectives and scopes to the builder.
      *
      * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Model|\Illuminate\Database\Eloquent\Relations\Relation  $builder
-     * @param  string[]  $scopes
+     * @param  array<string>  $scopes
      * @param  \Closure  $directiveFilter
      *
      * @return \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Eloquent\Model|\Illuminate\Database\Eloquent\Relations\Relation

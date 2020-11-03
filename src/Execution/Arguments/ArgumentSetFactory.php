@@ -64,7 +64,7 @@ class ArgumentSetFactory
      * Wrap client-given args with type information.
      *
      * @param  \GraphQL\Language\AST\FieldDefinitionNode|\GraphQL\Language\AST\InputObjectTypeDefinitionNode  $definition
-     * @param  mixed[]  $args
+     * @param  array<mixed>  $args
      * @return \Nuwave\Lighthouse\Execution\Arguments\ArgumentSet
      */
     public function wrapArgs(Node $definition, array $args): ArgumentSet
@@ -132,7 +132,7 @@ class ArgumentSetFactory
     /**
      * Wrap a client-given value with information from a type.
      *
-     * @param  mixed|mixed[]  $valueOrValues
+     * @param  mixed|array<mixed>  $valueOrValues
      * @param  \Nuwave\Lighthouse\Execution\Arguments\ListType|\Nuwave\Lighthouse\Execution\Arguments\NamedType  $type
      * @return array|mixed|\Nuwave\Lighthouse\Execution\Arguments\ArgumentSet
      */
@@ -140,7 +140,7 @@ class ArgumentSetFactory
     {
         // No need to recurse down further if the value is null
         if ($valueOrValues === null) {
-            return;
+            return null;
         }
 
         // We have to do this conversion as we are resolving a client query

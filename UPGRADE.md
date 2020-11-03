@@ -52,7 +52,7 @@ the [@guard](docs/master/api-reference/directives.md#guard) directive on selecte
 
 ```diff
 type Query {
--   profile: User! @middlware(checks: ["auth"])
+-   profile: User! @middleware(checks: ["auth"])
 +   profile: User! @guard
 }
 ```
@@ -93,7 +93,7 @@ definition that formally describes them.
 +     */
 +    public static function definition(): string
 +    {
-+        return /** @lang GraphQL */ <<<'SDL'
++        return /** @lang GraphQL */ <<<'GRAPHQL'
 +"""
 +A description of what this directive does.
 +"""
@@ -103,7 +103,7 @@ definition that formally describes them.
 +    """
 +    someArg: String
 +) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-+SDL;
++GRAPHQL;
 +    }
 ```
 
@@ -247,7 +247,7 @@ use Illuminate\Validation\Rule;
 +class UpdateUserValidator extends Validator
 {
     /**
-     * @return mixed[]
+     * @return array<string, array<mixed>>
      */
     public function rules(): array
     {
@@ -372,3 +372,22 @@ public function defaultHasOperator(): string
     return 'GTE';
 }
 ```
+
+### Change `ErrorHandler` method `handle()`
+
+If you implemented your own error handler, change it like this:
+
+```diff
+use Nuwave\Lighthouse\Execution\ErrorHandler;
+
+class ExtensionErrorHandler implements ErrorHandler
+{
+-   public static function handle(Error $error, Closure $next): array
++   public function __invoke(?Error $error, Closure $next): ?array
+    {
+        ...
+    }
+}
+```
+
+You can now discard errors by returning `null` from the handler.

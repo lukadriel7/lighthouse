@@ -9,7 +9,6 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Foundation\Application as LaravelApplication;
 use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 use Laravel\Lumen\Application as LumenApplication;
 use Nuwave\Lighthouse\Console\CacheCommand;
 use Nuwave\Lighthouse\Console\ClearCacheCommand;
@@ -26,15 +25,10 @@ use Nuwave\Lighthouse\Console\ValidateSchemaCommand;
 use Nuwave\Lighthouse\Console\ValidatorCommand;
 use Nuwave\Lighthouse\Execution\ContextFactory;
 use Nuwave\Lighthouse\Execution\ErrorPool;
-use Nuwave\Lighthouse\Execution\GraphQLRequest;
-use Nuwave\Lighthouse\Execution\LighthouseRequest;
-use Nuwave\Lighthouse\Execution\MultipartFormRequest;
 use Nuwave\Lighthouse\Execution\SingleResponse;
-use Nuwave\Lighthouse\Execution\Utils\GlobalId;
 use Nuwave\Lighthouse\Execution\ValidationRulesProvider;
 use Nuwave\Lighthouse\Schema\AST\ASTBuilder;
 use Nuwave\Lighthouse\Schema\DirectiveLocator;
-use Nuwave\Lighthouse\Schema\NodeRegistry;
 use Nuwave\Lighthouse\Schema\ResolverProvider;
 use Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider;
 use Nuwave\Lighthouse\Schema\Source\SchemaStitcher;
@@ -47,7 +41,6 @@ use Nuwave\Lighthouse\Support\Compatibility\MiddlewareAdapter;
 use Nuwave\Lighthouse\Support\Contracts\CanStreamResponse;
 use Nuwave\Lighthouse\Support\Contracts\CreatesContext;
 use Nuwave\Lighthouse\Support\Contracts\CreatesResponse;
-use Nuwave\Lighthouse\Support\Contracts\GlobalId as GlobalIdContract;
 use Nuwave\Lighthouse\Support\Contracts\ProvidesResolver;
 use Nuwave\Lighthouse\Support\Contracts\ProvidesSubscriptionResolver;
 use Nuwave\Lighthouse\Support\Contracts\ProvidesValidationRules;
@@ -66,7 +59,7 @@ class LighthouseServiceProvider extends ServiceProvider
         ], 'lighthouse-config');
 
         $this->publishes([
-            __DIR__.'/../assets/default-schema.graphql' => $configRepository->get('lighthouse.schema.register'),
+            __DIR__.'/default-schema.graphql' => $configRepository->get('lighthouse.schema.register'),
         ], 'lighthouse-schema');
 
         $this->loadRoutesFrom(__DIR__.'/Support/Http/routes.php');
@@ -80,7 +73,7 @@ class LighthouseServiceProvider extends ServiceProvider
     protected function loadRoutesFrom($path): void
     {
         if (AppVersion::isLumen()) {
-            require realpath($path);
+            require \Safe\realpath($path);
 
             return;
         }
@@ -98,27 +91,12 @@ class LighthouseServiceProvider extends ServiceProvider
         $this->app->singleton(GraphQL::class);
         $this->app->singleton(ASTBuilder::class);
         $this->app->singleton(DirectiveLocator::class);
-        $this->app->singleton(NodeRegistry::class);
         $this->app->singleton(TypeRegistry::class);
         $this->app->singleton(ErrorPool::class);
         $this->app->singleton(CreatesContext::class, ContextFactory::class);
         $this->app->singleton(CanStreamResponse::class, ResponseStream::class);
 
         $this->app->bind(CreatesResponse::class, SingleResponse::class);
-        $this->app->bind(GlobalIdContract::class, GlobalId::class);
-
-        $this->app->singleton(GraphQLRequest::class, function (Container $app): GraphQLRequest {
-            /** @var \Illuminate\Http\Request $request */
-            $request = $app->make('request');
-
-            /** @var string $contentType */
-            $contentType = $request->header('Content-Type') ?? '';
-            $isMultipartFormRequest = Str::startsWith($contentType, 'multipart/form-data');
-
-            return $isMultipartFormRequest
-                ? new MultipartFormRequest($request)
-                : new LighthouseRequest($request);
-        });
 
         $this->app->singleton(SchemaSourceProvider::class, function (): SchemaStitcher {
             return new SchemaStitcher(

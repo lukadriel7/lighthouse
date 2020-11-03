@@ -26,7 +26,7 @@ class BaseDirectiveTest extends TestCase
     public function testGetsModelClassFromDirective(): void
     {
         $this->schema .= /** @lang GraphQL */ '
-        type User @modelClass(class: "Team") {
+        type User @model(class: "Team") {
             id: ID
         }
         ';
@@ -174,7 +174,7 @@ class BaseDirectiveTest extends TestCase
             /**
              * Allow to call protected methods from the test.
              *
-             * @param  mixed[]  $args
+             * @param  array<mixed>  $args
              * @return mixed Whatever the method returns.
              */
             public function __call(string $method, array $args)

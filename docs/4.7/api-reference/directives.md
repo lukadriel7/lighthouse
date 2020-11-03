@@ -183,7 +183,7 @@ directive @belongsToMany(
   scopes: [String!]
 
   """
-  ALlows to resolve the relation as a paginated list.
+  Allows to resolve the relation as a paginated list.
   Allowed values: paginator, connection.
   """
   type: String
@@ -543,7 +543,7 @@ with the `injectArgs` argument:
 
 ```graphql
 type Mutation {
-  createPost(input: PostInput): Post @can(ability: "create", injectArgs: "true")
+  createPost(input: PostInput): Post @can(ability: "create", injectArgs: true)
 }
 ```
 
@@ -1127,7 +1127,7 @@ directive @hasMany(
   scopes: [String!]
 
   """
-  ALlows to resolve the relation as a paginated list.
+  Allows to resolve the relation as a paginated list.
   Allowed values: paginator, connection.
   """
   type: String
@@ -1580,7 +1580,7 @@ directive @morphMany(
   scopes: [String!]
 
   """
-  ALlows to resolve the relation as a paginated list.
+  Allows to resolve the relation as a paginated list.
   Allowed values: paginator, connection.
   """
   type: String

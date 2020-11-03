@@ -8,7 +8,7 @@ class RulesDirective extends BaseRulesDirective implements ArgDirective
 {
     public static function definition(): string
     {
-        return /** @lang GraphQL */ <<<'SDL'
+        return /** @lang GraphQL */ <<<'GRAPHQL'
 """
 Validate an argument using [Laravel validation](https://laravel.com/docs/validation).
 """
@@ -29,7 +29,7 @@ directive @rules(
   e.g. { email: "Must be a valid email", max: "The input was too long" }
   """
   messages: RulesMessageMap
-) on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
-SDL;
+) repeatable on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+GRAPHQL;
     }
 }

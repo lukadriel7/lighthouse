@@ -24,7 +24,7 @@ class ClientDirective
     /**
      * @var \GraphQL\Type\Definition\Directive|null
      */
-    private $definition;
+    protected $definition;
 
     public function __construct(string $name)
     {
@@ -60,7 +60,7 @@ class ClientDirective
      */
     protected function definition(): Directive
     {
-        if ($this->definition) {
+        if ($this->definition !== null) {
             return $this->definition;
         }
 
