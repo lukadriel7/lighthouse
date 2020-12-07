@@ -48,6 +48,8 @@ You can find and compare releases at the [GitHub release page](https://github.co
   errors by returning `null`
 - Allow subscriptions without named operations, base channels on the field name
 - Set `lighthouse.debug` config through env `LIGHTHOUSE_DEBUG` https://github.com/nuwave/lighthouse/pull/1592
+- Test helper `multipartGraphQL` now accepts arrays instead of JSON strings https://github.com/nuwave/lighthouse/pull/1615/
+- Use DateTime::ATOM for DateTimeTZ ISO 8601 compatibility https://github.com/nuwave/lighthouse/pull/1622
 
 ### Removed
 
