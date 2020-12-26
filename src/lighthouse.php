@@ -227,6 +227,7 @@ return [
     */
 
     'field_middleware' => [
+        \Nuwave\Lighthouse\Schema\Directives\TrimDirective::class,
         \Nuwave\Lighthouse\Schema\Directives\SanitizeDirective::class,
         \Nuwave\Lighthouse\Validation\ValidateDirective::class,
         \Nuwave\Lighthouse\Schema\Directives\TransformArgsDirective::class,
@@ -348,6 +349,11 @@ return [
                 'driver' => 'pusher',
                 'routes' => \Nuwave\Lighthouse\Subscriptions\SubscriptionRouter::class.'@pusher',
                 'connection' => 'pusher',
+            ],
+            'echo' => [
+                'driver' => 'echo',
+                'connection' => env('LIGHTHOUSE_SUBSCRIPTION_REDIS_CONNECTION', 'default'),
+                'routes' => \Nuwave\Lighthouse\Subscriptions\SubscriptionRouter::class.'@echoRoutes',
             ],
         ],
     ],

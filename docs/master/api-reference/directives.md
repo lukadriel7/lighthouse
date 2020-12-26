@@ -200,7 +200,7 @@ type User {
 }
 ```
 
-When using the connection `type` argument, you may create your own
+When using the `type` argument with pagination style `CONNECTION`, you may create your own
 [Edge type](https://facebook.github.io/relay/graphql/connections.htm#sec-Edge-Types) which
 may have fields that resolve from the model [pivot](https://laravel.com/docs/eloquent-relationships#many-to-many)
 data. You may also add a custom field resolver for fields you want to resolve yourself.
@@ -210,7 +210,7 @@ look for a {type}Edge type to be defined. In this case it would be `RoleEdge`.
 
 ```graphql
 type User {
-  roles: [Role!]! @belongsToMany(type: "connection", edgeType: "CustomRoleEdge")
+  roles: [Role!]! @belongsToMany(type: CONNECTION, edgeType: "CustomRoleEdge")
 }
 
 type CustomRoleEdge implements Edge {
@@ -228,7 +228,7 @@ Broadcast the results of a mutation to subscribed clients.
 """
 directive @broadcast(
   """
-  Name of the subscription that should be retriggered as a result of this operation..
+  Name of the subscription that should be retriggered as a result of this operation.
   """
   subscription: String!
 
@@ -1085,8 +1085,8 @@ You can return the related models paginated by setting the `type`.
 
 ```graphql
 type User {
-  postsPaginated: [Post!]! @hasMany(type: "paginator")
-  postsRelayConnection: [Post!]! @hasMany(type: "connection")
+  postsPaginated: [Post!]! @hasMany(type: PAGINATOR)
+  postsRelayConnection: [Post!]! @hasMany(type: CONNECTION)
 }
 ```
 
@@ -1901,15 +1901,15 @@ And can be queried like this:
 
 ### Pagination type
 
-The `type` of pagination defaults to `paginator`, but may also be set to a Relay
-compliant `connection`.
+The `type` of pagination defaults to `PAGINATOR`, but may also be set to a Relay
+compliant `CONNECTION`.
 
 > Lighthouse does not support actual cursor-based pagination as of now, see https://github.com/nuwave/lighthouse/issues/311 for details.
 > Under the hood, the "cursor" is decoded into a page offset.
 
 ```graphql
 type Query {
-  posts: [Post!]! @paginate(type: "connection")
+  posts: [Post!]! @paginate(type: CONNECTION)
 }
 ```
 
@@ -1941,15 +1941,15 @@ type PostEdge {
 
 ### Default count
 
-You can supply a `defaultCount` to set a default count for any kind of paginator.
+You can supply a `defaultCount` to set a default count for any type of pagination.
 
 ```graphql
 type Query {
-  posts: [Post!]! @paginate(type: "connection", defaultCount: 25)
+  posts: [Post!]! @paginate(type: CONNECTION, defaultCount: 25)
 }
 ```
 
-This let's you omit the `count` argument when querying:
+This lets you omit the `count` argument when querying:
 
 ```graphql
 query {
@@ -2098,6 +2098,11 @@ directive @rules(
   apply: [String!]!
 
   """
+  Specify a custom attribute name to use in your validation message.
+  """
+  attribute: String
+
+  """
   Specify the messages to return if the validators fail.
   Specified as an input object that maps rules to messages,
   e.g. { email: "Must be a valid email", max: "The input was too long" }
@@ -2129,6 +2134,11 @@ directive @rulesForArray(
   or the fully qualified class name of a custom validation rule.
   """
   apply: [String!]!
+
+  """
+  Specify a custom attribute name to use in your validation message.
+  """
+  attribute: String
 
   """
   Specify the messages to return if the validators fail.
@@ -2402,9 +2412,13 @@ type Query {
 
 ```graphql
 """
-Run the `trim` function on an input value.
+Remove whitespace from the beginning and end of a given input.
+
+This can be used on:
+- a single argument or input field to sanitize that subtree
+- a field to trim all strings
 """
-directive @trim on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION
+directive @trim on ARGUMENT_DEFINITION | INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 ```
 
 Whitespace around the passed in string will be removed.
@@ -2413,6 +2427,24 @@ Whitespace around the passed in string will be removed.
 type Mutation {
   createUser(name: String @trim): User
 }
+```
+
+Usage on a field applies `trim` recursively to all inputs.
+
+```graphql
+type Mutation {
+  createUser(input: CreateUserInput): User @trim
+}
+```
+
+If you want this for all your fields, consider adding this directive to your
+global field middleware in `lighthouse.php`:
+
+```php
+    'field_middleware' => [
+        \Nuwave\Lighthouse\Schema\Directives\TrimDirective::class,
+        ...
+    ],
 ```
 
 ## @union
@@ -2645,6 +2677,35 @@ Or use the additional clauses that Laravel provides:
 ```graphql
 type Query {
   postsByYear(created_at: Int! @where(clause: "whereYear")): [Post!]! @all
+}
+```
+
+## @whereAuth
+
+```graphql
+"""
+Filter a type to only return instances owned by the current user.
+"""
+directive @whereAuth(
+  """
+  Name of the relationship that links to the user model.
+  """
+  relation: String!
+
+  """
+  Specify which guard to use, e.g. "api".
+  When not defined, the default from `lighthouse.php` is used.
+  """
+  guard: String
+) on FIELD_DEFINITION
+```
+
+The following query returns all posts that belong to the currently authenticated user.  
+Behind the scenes it is using a `whereHas` query.
+
+```graphql
+type Query {
+  posts: [Post!]! @all @whereAuth(relation: "user")
 }
 ```
 
