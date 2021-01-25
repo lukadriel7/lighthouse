@@ -1,5 +1,5 @@
 .PHONY: it
-it: up vendor stan test ## Run useful checks before commits
+it: vendor stan test ## Run useful checks before commits
 
 .PHONY: help
 help: ## Displays this list of targets with descriptions
@@ -30,8 +30,7 @@ rector: up ## Automatic code fixes with rector
 	docker-compose exec php composer rector
 
 vendor: up composer.json ## Install composer dependencies
-	# TODO reenable once laragraph/utils is stable
-	# docker-compose exec php composer validate --strict
+	docker-compose exec php composer validate --strict
 	docker-compose exec php composer install
 	docker-compose exec php composer normalize
 
